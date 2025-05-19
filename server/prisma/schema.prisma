@@ -1,0 +1,63 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  name          String?
+  subaccounts   Subaccount[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Subaccount {
+  id            String    @id @default(uuid())
+  name          String
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  interactions  Interaction[]
+  interviews    InterviewReport[]
+  resumes       ResumeProfile[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Interaction {
+  id            String    @id @default(uuid())
+  subaccountId  String
+  subaccount    Subaccount @relation(fields: [subaccountId], references: [id])
+  type          String    // "voice", "interview", "resume"
+  content       String    // JSON string of interaction data
+  createdAt     DateTime  @default(now())
+}
+
+model InterviewReport {
+  id            String    @id @default(uuid())
+  subaccountId  String
+  subaccount    Subaccount @relation(fields: [subaccountId], references: [id])
+  role          String
+  questions     String    // JSON array of questions
+  answers       String    // JSON array of answers
+  evaluation    String    // JSON object of evaluation
+  score         Float
+  createdAt     DateTime  @default(now())
+}
+
+model ResumeProfile {
+  id            String    @id @default(uuid())
+  subaccountId  String
+  subaccount    Subaccount @relation(fields: [subaccountId], references: [id])
+  source        String    // "linkedin" or "resume"
+  content       String    // JSON object of parsed resume data
+  skills        String[]  // Array of extracted skills
+  createdAt     DateTime  @default(now())
+} 
