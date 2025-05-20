@@ -1,6 +1,6 @@
 .navbar {
   background: linear-gradient(
-    180deg,
+    270deg,
     rgba(255, 255, 255, 0.1),
     rgba(255, 255, 255, 0)
   );
@@ -8,7 +8,7 @@
   backdrop-filter: blur(20px);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
   border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 18px;
+  border-radius: 12px;
   display: flex;
   align-items: center; /* Align items vertically */
   justify-content: space-between; /* Space between logo and links */
@@ -24,6 +24,7 @@
   font-weight: 500;
   font-size: 24px;
   color: #d9d9d9;
+  padding: 9px;
   text-decoration: none;
   white-space: nowrap; /* Prevents text wrapping */
 }
@@ -31,14 +32,14 @@
 /* Links container */
 .navbar .links {
   display: flex;
-  gap: 40px; /* Space between links */
+  gap: 35px; /* Space between links */
 }
 
 /* Links styling */
 .navbar .links a {
   text-decoration: none;
-  font-size: 18px;
-  color: #d9d9d9;
+  font-size: 19px;
+  color: #a2a2a2;
   font-family: Helvetica, sans-serif;
   font-weight: 200;
   position: relative; /* For hover underline effect */
@@ -107,6 +108,7 @@
   padding: 0px;
   font-size: 48px;
   color: #ffffff;
+  text-align: left;
 }
 
 

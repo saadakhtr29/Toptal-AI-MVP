@@ -2,10 +2,10 @@ import React from "react";
 import "../styles/landingPage.css";
 import Spline from "@splinetool/react-spline";
 import { Navigate } from "react-router-dom";
-// import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 export default function LandingPage() {
-  // const navigate = useNavigate();
+  const navigate = useNavigate();
   return (
     <>
       <div className="navbar-container">
