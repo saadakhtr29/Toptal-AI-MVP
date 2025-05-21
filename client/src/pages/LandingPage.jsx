@@ -1,4 +1,4 @@
-import React from "react";
+import React, {useRef} from "react";
 import "../styles/landingPage.css";
 import Spline from "@splinetool/react-spline";
 import { Navigate } from "react-router-dom";
@@ -6,6 +6,11 @@ import { useNavigate } from "react-router-dom";
 
 export default function LandingPage() {
   const navigate = useNavigate();
+
+// Refs for sections
+const featuresRef = useRef(null);
+const aboutRef = useRef(null);
+
   return (
     <>
       <div className="navbar-container">
@@ -15,19 +20,21 @@ export default function LandingPage() {
             <a href="" onClick={() => scrollToSection()}>
               Home
             </a>
-            <a href="" onClick={() => scrollToSection()}>
+            <a href="#features" onClick={() => scrollToSection(featuresRef)}>
               Features
             </a>
-            <a href="" onClick={() => scrollToSection()}>
+            <a href="#about" onClick={() => scrollToSection(aboutRef)}>
               About
             </a>
           </div>
         </div>
+        <button className="started-btn" onClick={()=> navigate("/signup")}>GET STARTED</button>
       </div>
+      
       <div className="heroSection">
         <Spline scene="https://prod.spline.design/8F9hP8ySMi-xWUBC/scene.splinecode" />
       </div>
-      <div className="about-container">
+      <div id="about" className="about-container">
        <div className="about-content">
        <h1 className="about-title">“What is a Mid-Office AI Suite?”</h1>
         <p className="about-text">
@@ -39,10 +46,13 @@ export default function LandingPage() {
           iaculis nulla nunc orci congue praesent. Risus turpis et euismod
           varius eu velit eget urna nec. Mauris in rutrum eu dui cursus risus.
           Mauris facilisi eget id semper eget.
+          Lorem ipsum dolor sit amet consectetur. Suspendisse quisque odio
+          iaculis nulla nunc orci congue praesent. Risus turpis et euismod
+          varius eu velit eget urna nec. Mauris in rutrum eu dui cursus risus.
         </p>
        </div>
       </div>
-      <div className="features-container">
+      <div id="features" className="features-container">
         <h1>“Everything You Need to Hire – Unified in One Suite”</h1>
       </div>
       <div className="working-container">
@@ -62,7 +72,7 @@ export default function LandingPage() {
           </div>
         </div>
         <h1 className="closer">Ready to Supercharge Your Hiring?</h1>
-        <button className="bottom-btn" onClick={()=> Navigate("/signup")}>Launch Your AI Mid-Office</button>
+        <button className="bottom-btn" onClick={()=> navigate("/signup")}>Launch Your AI Mid-Office</button>
       </div>
       <div className="footer-container">
         <p className="copyright-text">Copyright © 2025 Toptal AI. All rights reserved.</p>

@@ -1,3 +1,11 @@
+.navbar-container {
+  display: flex;
+  /* align-items: center;
+  justify-content: center; */
+  gap: 190px; /* space between navbar and button */
+  margin-top: 5px;
+}
+
 .navbar {
   background: linear-gradient(
     270deg,
@@ -15,6 +23,7 @@
   padding: 0px 20px;
   margin: 10px 50px 0px 50px;
   width: 850px;
+  height: 60px;
   z-index: 5;
 }
 
@@ -32,7 +41,7 @@
 /* Links container */
 .navbar .links {
   display: flex;
-  gap: 35px; /* Space between links */
+  gap: 40px; /* Space between links */
 }
 
 /* Links styling */
@@ -66,6 +75,26 @@
   width: 100%;
 }
 
+.started-btn {
+  background: linear-gradient(
+    45deg,
+    rgba(129, 129, 129, 0.5),
+    rgba(50, 50, 50, 0.3)
+  );
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  color: #c1c1c1;
+  font-size: 14px;
+  font-weight: 900;
+  padding: 1px 20px;
+  margin: 20px 10px 0px 10px;
+  height: 50px;
+  cursor: pointer;
+}
+
 .about-container {
   background: linear-gradient(
     180deg,
@@ -93,14 +122,14 @@
 
 /* Content */
 .about-content {
-    color: #ffffff;
-    font-size: 25px;
-    font-weight: 200;
-    text-align: right;
-    line-height: 1.5;
-    padding: 10px 20px 10px 20px;
-    margin: 10px 40px 20px 40px;
-  }
+  color: #ffffff;
+  font-size: 25px;
+  font-weight: 200;
+  text-align: right;
+  line-height: 1.5;
+  padding: 10px 20px 10px 20px;
+  margin: 10px 40px 20px 40px;
+}
 
 /* Heading */
 .about-title {
@@ -110,7 +139,6 @@
   color: #ffffff;
   text-align: left;
 }
-
 
 .features-container h1 {
   font-size: 48px;
