@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-// import { useAuth } from "../context/AuthProvider";
+import { useAuth } from "../context/AuthProvider";
 import "../styles/loginPage.css";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
-  // const { login } = useAuth();
+  const { login } = useAuth();
 
   const handleLogin = async () => {
     try {
@@ -20,6 +20,7 @@ export default function LoginPage() {
   };
 
   return (
+    <div className="login-page-wrapper">
     <div className="login-container">
       <img className="login-gif" src="../a4cf01a2edfaf1b62c83b31ab78361e5.gif" alt="Login-gif" />
       <div className="login-contents">
@@ -47,5 +48,6 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  </div>
   );
 }

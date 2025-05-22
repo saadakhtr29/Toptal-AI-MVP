@@ -9,20 +9,36 @@ A real-time AI-powered recruitment platform with three main modules:
 ## Project Structure
 
 ```
-monorepo/
-├── client/                # React frontend
-│   ├── src/
-│   │   ├── modules/      # Main feature modules
-│   │   ├── components/   # Shared components
-│   │   └── services/     # API services
-│   └── package.json
+Toptal-AI-MVP/
+├── client/                      # Frontend React application
+│   ├── public/                  # Static files
+│   ├── src/                     # Source code
+│   │   ├── assets/             # Images, fonts, etc.
+│   │   ├── components/         # Reusable React components
+│   │   ├── context/            # React context providers
+│   │   ├── modules/            # Feature-specific modules
+│   │   ├── pages/              # Page components
+│   │   ├── services/           # API services
+│   │   ├── styles/             # CSS and styling files
+│   │   ├── App.jsx            # Main App component
+│   │   ├── App.css            # App-specific styles
+│   │   ├── index.css          # Global styles
+│   │   └── main.jsx           # Entry point
+│   ├── package.json            # Frontend dependencies
+│   ├── vite.config.js          # Vite configuration
+│   └── eslint.config.js        # ESLint configuration
 │
-└── server/               # Node.js backend
-    ├── routes/          # API routes
-    ├── controllers/     # Route controllers
-    ├── services/        # Business logic
-    ├── prisma/         # Database schema
-    └── package.json
+├── server/                      # Backend Node.js application
+│   ├── controllers/            # Route controllers
+│   ├── middleware/             # Express middleware
+│   ├── prisma/                 # Database schema and migrations
+│   ├── routes/                 # API routes
+│   ├── services/               # Business logic
+│   ├── utils/                  # Utility functions
+│   ├── index.js               # Server entry point
+│   └── package.json           # Backend dependencies
+│
+└── README.md                   # Project documentation
 ```
 
 ## Prerequisites

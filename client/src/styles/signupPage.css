@@ -1,3 +1,14 @@
+.signup-page-wrapper {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0px;
+  margin: 0px;
+  background-image: url("../assets/bg-grid.svg");
+}
+
 .signup-container {
   background: linear-gradient(
     180deg,
@@ -61,10 +72,12 @@ input {
 
 .firstname-field {
     width: 139px;
+    margin: 9px 4px 9px 9px;
 }
 
 .lastname-field{
     width: 139px;
+    margin: 9px 9px 9px 4px;
 }
 
 .signup-btn {

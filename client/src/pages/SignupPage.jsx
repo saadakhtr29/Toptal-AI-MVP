@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-// import { useAuth } from "../context/AuthProvider";
+import { useAuth } from "../context/AuthProvider";
 import "../styles/signupPage.css";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
-  // const { signup } = useAuth();
+  const { signup } = useAuth();
 
   const handleSignup = async () => {
     try {
@@ -20,7 +20,8 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="signup-container">
+   <div className="signup-page-wrapper">
+     <div className="signup-container">
       <div className="signup-contents">
         <h1 className="signup-header">Let’s get you started</h1>
         <p className="signup-text">
@@ -60,5 +61,6 @@ export default function SignupPage() {
         alt=""
       />
     </div>
+   </div>
   );
 }

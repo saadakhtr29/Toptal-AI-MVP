@@ -136,6 +136,10 @@
   text-align: left;
 }
 
+.features-container {
+  padding: 15px 20px 450px 20px;
+}
+
 .features-container h1 {
   font-size: 48px;
   text-align: right;
@@ -245,7 +249,7 @@
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 20px 20px 0px 0px;
-  padding: 3px 20px;
+  padding: 150px 20px 3px 20px;
   margin: 0px;
   z-index: 5;
 }
