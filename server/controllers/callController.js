@@ -1,5 +1,8 @@
 const streamProcessor = require("../services/streamProcessor");
 const twilioService = require("../services/twilioService");
+const speechToTextService = require("../services/speechToText");
+const geminiService = require("../services/geminiService");
+const { CallSession, Interaction } = require("../models");
 const { v4: uuidv4 } = require("uuid");
 
 class CallController {
@@ -49,95 +52,72 @@ class CallController {
   // Handle incoming call
   async handleIncomingCall(req, res) {
     try {
-      const { CallSid, From } = req.body;
-      const callId = uuidv4();
+      const callSid = req.body.CallSid;
+      const sessionId = uuidv4();
 
-      // Start Twilio call handling
-      const call = await twilioService.handleIncomingCall(
-        CallSid,
-        From,
-        callId
+      // Create new call session
+      const callSession = await CallSession.create({
+        sessionId,
+        callSid,
+        status: "IN_PROGRESS",
+        startTime: new Date(),
+      });
+
+      // Generate initial greeting
+      const greeting = await geminiService.generateResponse(
+        "Generate a professional greeting for an AI recruiter"
       );
 
-      // Initialize stream processing
-      await this.streamProcessor.processStream(callId, call.stream, callId, {
-        voice: {
-          languageCode: "en-US",
-          name: "en-US-Neural2-F",
-          ssmlGender: "FEMALE",
-        },
-        audioConfig: {
-          audioEncoding: "MP3",
-          speakingRate: 1.0,
-          pitch: 0,
-          volumeGainDb: 0,
-        },
-      });
+      // Generate TwiML response
+      const twiml = twilioService.generateVoiceResponse(greeting.text);
 
-      res.json({
-        success: true,
-        callId,
-        status: "in-progress",
-        twilioCallSid: CallSid,
-      });
+      res.type("text/xml");
+      res.send(twiml);
     } catch (error) {
       console.error("Incoming Call Error:", error);
-      res.status(500).json({
-        success: false,
-        error: "Failed to handle incoming call",
-      });
+      res.status(500).send("Error handling incoming call");
     }
   }
 
-  // Update call status
-  async updateCallStatus(req, res) {
+  // Handle call status updates
+  async handleCallStatus(req, res) {
     try {
       const { CallSid, CallStatus } = req.body;
-      const callId = req.params.callId;
 
-      // Update Twilio call status
-      await twilioService.updateCallStatus(CallSid, CallStatus);
+      // Update call session status
+      await CallSession.update(
+        { status: CallStatus.toUpperCase() },
+        { where: { callSid: CallSid } }
+      );
 
-      if (CallStatus === "completed" || CallStatus === "failed") {
-        // Stop stream processing
-        await this.streamProcessor.stopStream(callId);
-      }
-
-      res.json({
-        success: true,
-        status: CallStatus,
-      });
+      res.status(200).send("Status updated");
     } catch (error) {
       console.error("Call Status Update Error:", error);
-      res.status(500).json({
-        success: false,
-        error: "Failed to update call status",
-      });
+      res.status(500).send("Error updating call status");
     }
   }
 
   // End call
   async endCall(req, res) {
     try {
-      const { callId } = req.params;
+      const { callSid } = req.params;
 
-      // Stop stream processing
-      const summary = await this.streamProcessor.stopStream(callId);
+      // End call in Twilio
+      await twilioService.endCall(callSid);
 
-      // End Twilio call
-      await twilioService.endCall(callId);
+      // Update call session
+      await CallSession.update(
+        {
+          status: "COMPLETED",
+          endTime: new Date(),
+        },
+        { where: { callSid } }
+      );
 
-      res.json({
-        success: true,
-        status: "ended",
-        summary,
-      });
+      res.status(200).json({ message: "Call ended successfully" });
     } catch (error) {
-      console.error("Call End Error:", error);
-      res.status(500).json({
-        success: false,
-        error: "Failed to end call",
-      });
+      console.error("End Call Error:", error);
+      res.status(500).json({ error: "Failed to end call" });
     }
   }
 
@@ -170,29 +150,65 @@ class CallController {
   // Handle media stream
   async handleMediaStream(req, res) {
     try {
-      const { callId } = req.params;
-      const { mediaStreamSid } = req.body;
+      const { CallSid } = req.query;
+      const callSession = await CallSession.findOne({
+        where: { callSid: CallSid },
+      });
 
-      // Get stream status
-      const status = this.streamProcessor.getStreamStatus(callId);
-      if (!status) {
-        return res.status(404).json({
-          success: false,
-          error: "Call not found",
-        });
+      if (!callSession) {
+        throw new Error("Call session not found");
       }
 
-      // Generate TwiML for stream
-      const twiml = twilioService.generateStreamTwiML(mediaStreamSid);
+      // Set up WebSocket connection
+      const ws = await new Promise((resolve, reject) => {
+        const wss = new WebSocket.Server({ noServer: true });
+        wss.on("connection", (ws) => {
+          resolve(ws);
+        });
+      });
 
-      res.type("text/xml");
-      res.send(twiml);
+      // Handle incoming audio stream
+      req.on("data", async (chunk) => {
+        try {
+          // Convert audio to text
+          const transcription = await speechToTextService.transcribeAudio(
+            chunk
+          );
+
+          // Generate AI response
+          const response = await geminiService.generateResponse(
+            transcription.text,
+            { sessionId: callSession.sessionId }
+          );
+
+          // Convert response to speech
+          const audioResponse = await textToSpeechService.synthesizeSpeech(
+            response.text
+          );
+
+          // Send audio back to caller
+          ws.send(audioResponse);
+
+          // Log interaction
+          await Interaction.create({
+            sessionId: callSession.sessionId,
+            type: "VOICE",
+            input: transcription.text,
+            output: response.text,
+            metadata: {
+              confidence: transcription.confidence,
+              duration: Date.now() - callSession.startTime,
+            },
+          });
+        } catch (error) {
+          console.error("Media Stream Processing Error:", error);
+        }
+      });
+
+      res.status(200).send("Stream connected");
     } catch (error) {
       console.error("Media Stream Error:", error);
-      res.status(500).json({
-        success: false,
-        error: "Failed to handle media stream",
-      });
+      res.status(500).send("Error handling media stream");
     }
   }
 }

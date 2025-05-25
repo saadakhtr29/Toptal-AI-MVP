@@ -1,0 +1,31 @@
+.insightvault-container {
+  position: absolute;
+  right: 40px;
+  bottom: 40px;
+  z-index: 10;
+}
+.insightvault-btn {
+  background: rgba(40, 40, 40, 0.7);
+  border-radius: 14px;
+  border: 1.5px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 4px 32px 0 rgba(0, 0, 0, 0.18);
+  color: #e0e0e0;
+  font-size: 1.3rem;
+  font-weight: 700;
+  padding: 18px 36px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: background 0.2s;
+}
+.insightvault-btn:hover {
+  background: rgba(60, 60, 60, 0.85);
+}
+.insightvault-arrow {
+  font-size: 2rem;
+  font-weight: 900;
+  margin-left: 10px;
+  color: #fff;
+  text-shadow: 0 1px 8px #000;
+}

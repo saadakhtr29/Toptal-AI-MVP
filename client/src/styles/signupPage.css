@@ -30,27 +30,27 @@
   z-index: 5;
 }
 
-.signup-header{
-    font-size: 48px;
-    padding: 10px 0px 10px 0px;
-    margin: 10px 0px 10px 0px;
+.signup-header {
+  font-size: 48px;
+  padding: 10px 0px 10px 0px;
+  margin: 10px 0px 10px 0px;
 }
 
-.signup-text{
-    color: #989898;
-    margin: 0px 0px 40px 0px;
+.signup-text {
+  color: #989898;
+  margin: 0px 0px 40px 0px;
 }
 
-a{
-    font-weight: 800;
-    color: #989898;
+a {
+  font-weight: 800;
+  color: #989898;
 }
 
 .signup-gif {
   mix-blend-mode: screen;
   width: 350px;
   height: 350px;
-  margin: 150px 20px ;
+  margin: 150px 20px;
 }
 
 input {
@@ -71,13 +71,13 @@ input {
 }
 
 .firstname-field {
-    width: 139px;
-    margin: 9px 4px 9px 9px;
+  width: 139px;
+  margin: 9px 4px 9px 9px;
 }
 
-.lastname-field{
-    width: 139px;
-    margin: 9px 9px 9px 4px;
+.lastname-field {
+  width: 139px;
+  margin: 9px 9px 9px 4px;
 }
 
 .signup-btn {

@@ -1,6 +1,7 @@
 const twilio = require("twilio");
 const dotenv = require("dotenv");
 const { v4: uuidv4 } = require("uuid");
+const VoiceResponse = twilio.twiml.VoiceResponse;
 
 dotenv.config();
 
@@ -9,79 +10,71 @@ const authToken = process.env.TWILIO_AUTH_TOKEN;
 const twilioNumber = process.env.TWILIO_PHONE_NUMBER;
 
 const client = twilio(accountSid, authToken);
-const VoiceResponse = twilio.twiml.VoiceResponse;
 
 class TwilioService {
   constructor() {
-    this.client = twilio(
-      process.env.TWILIO_ACCOUNT_SID,
-      process.env.TWILIO_AUTH_TOKEN
-    );
-    this.phoneNumber = process.env.TWILIO_PHONE_NUMBER;
+    this.client = client;
+  }
+
+  // Generate TwiML for voice call
+  generateVoiceResponse(message) {
+    const response = new VoiceResponse();
+    response.say({ voice: "Polly.Amy" }, message);
+    return response.toString();
   }
 
   // Start a new call
-  async startCall(phoneNumber, callId) {
+  async startCall(to, from, twimlUrl) {
     try {
       const call = await this.client.calls.create({
-        to: phoneNumber,
-        from: this.phoneNumber,
-        url: `${process.env.BASE_URL}/api/calls/${callId}/stream`,
-        statusCallback: `${process.env.BASE_URL}/api/calls/${callId}/status`,
+        to,
+        from: process.env.TWILIO_PHONE_NUMBER,
+        url: twimlUrl,
+        statusCallback: `${process.env.API_URL}/api/calls/status`,
         statusCallbackEvent: ["initiated", "ringing", "answered", "completed"],
         statusCallbackMethod: "POST",
       });
-
-      return {
-        sid: call.sid,
-        stream: this.createMediaStream(call.sid),
-      };
+      return call;
     } catch (error) {
-      console.error("Twilio Call Start Error:", error);
-      throw new Error("Failed to start call");
+      console.error("Twilio Call Error:", error);
+      throw new Error("Failed to initiate call");
     }
   }
 
   // Handle incoming call
-  async handleIncomingCall(callSid, from, callId) {
-    try {
-      const call = await this.client.calls(callSid).fetch();
+  async handleIncomingCall(req, res) {
+    const response = new VoiceResponse();
 
-      // Update call with stream URL
-      await this.client.calls(callSid).update({
-        url: `${process.env.BASE_URL}/api/calls/${callId}/stream`,
-        statusCallback: `${process.env.BASE_URL}/api/calls/${callId}/status`,
-        statusCallbackEvent: ["initiated", "ringing", "answered", "completed"],
-        statusCallbackMethod: "POST",
-      });
+    // Enable media streams
+    const connect = response.connect();
+    connect.stream({
+      url: `wss://${req.headers.host}/api/calls/stream`,
+    });
 
-      return {
-        sid: call.sid,
-        stream: this.createMediaStream(call.sid),
-      };
-    } catch (error) {
-      console.error("Twilio Incoming Call Error:", error);
-      throw new Error("Failed to handle incoming call");
-    }
+    res.type("text/xml");
+    res.send(response.toString());
   }
 
   // Update call status
   async updateCallStatus(callSid, status) {
     try {
-      await this.client.calls(callSid).update({
-        status: status === "completed" ? "completed" : "in-progress",
+      const call = await this.client.calls(callSid).update({
+        status: status,
       });
+      return call;
     } catch (error) {
       console.error("Twilio Status Update Error:", error);
       throw new Error("Failed to update call status");
     }
   }
 
-  // End call
-  async endCall(callId) {
+  // End an active call
+  async endCall(callSid) {
     try {
-      const call = await this.client.calls(callId).fetch();
-      await call.update({ status: "completed" });
+      const call = await this.client.calls(callSid).update({
+        status: "completed",
+      });
+      return call;
     } catch (error) {
       console.error("Twilio End Call Error:", error);
       throw new Error("Failed to end call");
@@ -101,11 +94,9 @@ class TwilioService {
   // Generate TwiML for stream
   generateStreamTwiML(streamSid) {
     const twiml = new twilio.twiml.VoiceResponse();
-    twiml
-      .connect()
-      .stream({
-        url: `wss://${process.env.BASE_URL}/api/streams/${streamSid}`,
-      });
+    twiml.connect().stream({
+      url: `wss://${process.env.BASE_URL}/api/streams/${streamSid}`,
+    });
     return twiml.toString();
   }
 }

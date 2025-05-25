@@ -11,7 +11,9 @@ export default function LoginPage() {
 
   const handleLogin = async () => {
     try {
-      await login(email, password);
+      const userCredential = await login(email, password);
+      const token = await userCredential.user.getIdToken();
+      localStorage.setItem("authToken", token);
       alert("Welcome back!");
       navigate("/dashboard");
     } catch (e) {
@@ -21,33 +23,40 @@ export default function LoginPage() {
 
   return (
     <div className="login-page-wrapper">
-    <div className="login-container">
-      <img className="login-gif" src="../a4cf01a2edfaf1b62c83b31ab78361e5.gif" alt="Login-gif" />
-      <div className="login-contents">
-        <h1 className="login-header">Welcome back!</h1>
-        <p className="login-text">
-          Don’t have an account? <a className="signup-link" href="/signup">Sign up</a>
-        </p>
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+      <div className="login-container">
+        <img
+          className="login-gif"
+          src="../a4cf01a2edfaf1b62c83b31ab78361e5.gif"
+          alt="Login-gif"
         />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        <div className="login-inputs">
-          <button className="login-btn" onClick={handleLogin}>
-            Login
-          </button>
-          <button className="google-signin-btn">Sign in with Google</button>
+        <div className="login-contents">
+          <h1 className="login-header">Welcome back!</h1>
+          <p className="login-text">
+            Don't have an account?{" "}
+            <a className="signup-link" href="/signup">
+              Sign up
+            </a>
+          </p>
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <div className="login-inputs">
+            <button className="login-btn" onClick={handleLogin}>
+              Login
+            </button>
+            <button className="google-signin-btn">Sign in with Google</button>
+          </div>
         </div>
       </div>
     </div>
-  </div>
   );
 }

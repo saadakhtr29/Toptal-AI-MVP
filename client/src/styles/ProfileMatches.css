@@ -1,0 +1,117 @@
+.profile-matches {
+  margin: 2rem 0;
+}
+
+.profile-matches h2 {
+  margin-bottom: 1.5rem;
+  color: #333;
+  font-size: 1.5rem;
+}
+
+.matches-loading {
+  text-align: center;
+  margin: 2rem 0;
+  color: #666;
+}
+
+.matches-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.match-card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+}
+
+.match-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.match-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  margin-right: 1rem;
+  object-fit: cover;
+}
+
+.match-info h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #333;
+}
+
+.match-title {
+  margin: 0.25rem 0 0;
+  color: #666;
+  font-size: 0.875rem;
+}
+
+.match-summary {
+  color: #666;
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+
+.match-skills {
+  margin-bottom: 1rem;
+}
+
+.match-skills h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+  color: #666;
+}
+
+.skills-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.skill-tag {
+  background-color: #f5f5f5;
+  color: #666;
+  padding: 0.25rem 0.75rem;
+  border-radius: 16px;
+  font-size: 0.75rem;
+  border: 1px solid #ddd;
+}
+
+.match-score {
+  margin-bottom: 1rem;
+}
+
+.match-score h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+  color: #666;
+}
+
+.score-value {
+  font-size: 1.5rem;
+  color: #1976d2;
+  font-weight: 500;
+}
+
+.message-button {
+  width: 100%;
+  background-color: #1976d2;
+  color: white;
+  border: none;
+  padding: 0.75rem;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.message-button:hover {
+  background-color: #1565c0;
+}

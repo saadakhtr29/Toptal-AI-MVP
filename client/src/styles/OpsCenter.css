@@ -1,0 +1,91 @@
+.ops-center-container {
+  background: rgba(40, 40, 40, 0.7);
+  border-radius: 18px;
+  border: 1.5px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 4px 32px 0 rgba(0, 0, 0, 0.18);
+  padding: 24px 18px 18px 18px;
+  width: 260px;
+  min-height: 340px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+.ops-center-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #e0e0e0;
+  margin-bottom: 18px;
+  letter-spacing: 1px;
+  text-shadow: 0 1px 8px #000;
+}
+.ops-center-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 18px 0;
+  width: 100%;
+}
+.ops-center-list li {
+  font-size: 1.08rem;
+  color: #d0d0d0;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+.ops-center-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6ee7b7 0%, #3b82f6 100%);
+  margin-right: 10px;
+}
+.ops-center-upload-section {
+  width: 100%;
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+.ops-center-upload-btn {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  padding: 8px 0;
+  margin-bottom: 10px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.ops-center-upload-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+.ops-center-call-controls {
+  display: flex;
+  gap: 10px;
+}
+.ops-center-call-btn {
+  flex: 1;
+  padding: 8px 0;
+  border-radius: 8px;
+  border: none;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.ops-center-call-btn.start {
+  background: linear-gradient(90deg, #34d399 0%, #3b82f6 100%);
+  color: #fff;
+}
+.ops-center-call-btn.stop {
+  background: linear-gradient(90deg, #f87171 0%, #fbbf24 100%);
+  color: #fff;
+}
+.ops-center-call-btn:active {
+  filter: brightness(0.95);
+}

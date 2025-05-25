@@ -16,6 +16,63 @@ class SpeechToTextService {
     };
   }
 
+  // Convert audio to text
+  async transcribeAudio(audioBuffer) {
+    try {
+      const request = {
+        audio: {
+          content: audioBuffer.toString("base64"),
+        },
+        config: this.config,
+      };
+
+      const [response] = await this.client.recognize(request);
+      const transcription = response.results
+        .map((result) => result.alternatives[0].transcript)
+        .join("\n");
+
+      return {
+        text: transcription,
+        confidence: response.results[0].alternatives[0].confidence,
+      };
+    } catch (error) {
+      console.error("Speech-to-Text Error:", error);
+      throw new Error("Failed to transcribe audio");
+    }
+  }
+
+  // Stream audio for real-time transcription
+  async streamTranscription(audioStream) {
+    try {
+      const recognizeStream = this.client
+        .streamingRecognize({
+          config: this.config,
+          interimResults: true,
+        })
+        .on("error", (error) => {
+          console.error("Streaming Error:", error);
+        })
+        .on("data", (data) => {
+          if (data.results[0] && data.results[0].alternatives[0]) {
+            const transcription = data.results[0].alternatives[0].transcript;
+            const isFinal = data.results[0].isFinal;
+
+            return {
+              text: transcription,
+              isFinal,
+              confidence: data.results[0].alternatives[0].confidence,
+            };
+          }
+        });
+
+      audioStream.pipe(recognizeStream);
+      return recognizeStream;
+    } catch (error) {
+      console.error("Streaming Transcription Error:", error);
+      throw new Error("Failed to start streaming transcription");
+    }
+  }
+
   // Convert audio stream to text
   async transcribeStream(audioStream) {
     try {

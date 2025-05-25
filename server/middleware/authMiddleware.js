@@ -1,4 +1,6 @@
-const admin = require("firebase-admin");
+const admin = require("../config/firebase");
+const { User } = require("../models");
+const { Interaction } = require("../models");
 
 // Initialize Firebase Admin if not already initialized
 if (!admin.apps.length) {
@@ -10,23 +12,33 @@ if (!admin.apps.length) {
 // Verify Firebase token
 const verifyToken = async (req, res, next) => {
   try {
-    const token = req.headers.authorization?.split("Bearer ")[1];
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        error: "No token provided",
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "No token provided" });
+    }
+
+    const token = authHeader.split(" ")[1];
+    const decodedToken = await admin.auth().verifyIdToken(token);
+
+    // Get or create user in our database
+    let user = await User.findOne({ where: { firebaseUid: decodedToken.uid } });
+
+    if (!user) {
+      // Create new user if doesn't exist
+      user = await User.create({
+        firebaseUid: decodedToken.uid,
+        email: decodedToken.email,
+        name: decodedToken.name || decodedToken.email.split("@")[0],
+        role: "CANDIDATE", // Default role
       });
     }
 
-    const decodedToken = await admin.auth().verifyIdToken(token);
-    req.user = decodedToken;
+    // Attach user to request
+    req.user = user;
     next();
   } catch (error) {
-    console.error("Token Verification Error:", error);
-    res.status(401).json({
-      success: false,
-      error: "Invalid token",
-    });
+    console.error("Auth Error:", error);
+    res.status(401).json({ error: "Invalid token" });
   }
 };
 
@@ -34,17 +46,11 @@ const verifyToken = async (req, res, next) => {
 const checkRole = (roles) => {
   return (req, res, next) => {
     if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        error: "User not authenticated",
-      });
+      return res.status(401).json({ error: "Authentication required" });
     }
 
     if (!roles.includes(req.user.role)) {
-      return res.status(403).json({
-        success: false,
-        error: "Insufficient permissions",
-      });
+      return res.status(403).json({ error: "Insufficient permissions" });
     }
 
     next();
@@ -55,17 +61,26 @@ const checkRole = (roles) => {
 const checkInteractionAccess = async (req, res, next) => {
   try {
     const { callId } = req.params;
-    const userId = req.user.uid;
+    const userId = req.user.id;
 
-    // Here you would typically check if the user has access to this call
-    // For now, we'll just pass through
+    // Check if user has access to this interaction
+    const interaction = await Interaction.findOne({
+      where: {
+        id: callId,
+        userId: userId,
+      },
+    });
+
+    if (!interaction) {
+      return res
+        .status(403)
+        .json({ error: "Access denied to this interaction" });
+    }
+
     next();
   } catch (error) {
-    console.error("Interaction Access Check Error:", error);
-    res.status(403).json({
-      success: false,
-      error: "Access denied",
-    });
+    console.error("Access Check Error:", error);
+    res.status(500).json({ error: "Error checking access" });
   }
 };
 

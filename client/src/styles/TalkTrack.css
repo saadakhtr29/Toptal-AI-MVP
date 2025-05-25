@@ -1,0 +1,53 @@
+.talktrack-container {
+  background: rgba(40, 40, 40, 0.7);
+  border-radius: 18px;
+  border: 1.5px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 4px 32px 0 rgba(0, 0, 0, 0.18);
+  padding: 24px 18px 18px 18px;
+  width: 320px;
+  min-height: 340px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.talktrack-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #e0e0e0;
+  margin-bottom: 18px;
+  letter-spacing: 1px;
+  text-shadow: 0 1px 8px #000;
+}
+.talktrack-messages {
+  width: 100%;
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.talktrack-msg {
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 1.05rem;
+  max-width: 90%;
+  word-break: break-word;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e0e0e0;
+  box-shadow: 0 1px 6px 0 rgba(0, 0, 0, 0.1);
+}
+.talktrack-msg-ai {
+  align-self: flex-start;
+  background: linear-gradient(90deg, #3b82f6 0%, #a5b4fc 100%);
+  color: #fff;
+}
+.talktrack-msg-candidate {
+  align-self: flex-end;
+  background: linear-gradient(90deg, #fbbf24 0%, #f87171 100%);
+  color: #fff;
+}
+.talktrack-sender {
+  font-weight: 600;
+  margin-right: 6px;
+  opacity: 0.8;
+}

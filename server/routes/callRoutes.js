@@ -24,17 +24,17 @@ router.post("/start-bulk", (req, res) =>
 // Initialize a new call
 router.post("/initiate", authMiddleware, callController.initiateCall);
 
-// Handle incoming call (no auth required)
-router.post("/incoming", callController.handleIncomingCall);
+// Public routes (Twilio webhooks)
+router.post("/voice", callController.handleIncomingCall);
+router.post("/status", callController.handleCallStatus);
+router.post("/stream", callController.handleMediaStream);
 
-// Update call status (no auth required)
-router.post("/:callId/status", callController.updateCallStatus);
-
-// End call
-router.post("/:callId/end", authMiddleware, callController.endCall);
+// Protected routes
+router.use(authMiddleware);
+router.post("/:callId/end", callController.endCall);
 
 // Get call status
-router.get("/:callId/status", authMiddleware, callController.getCallStatus);
+router.get("/:callId/status", callController.getCallStatus);
 
 // Handle media stream
 router.post(
