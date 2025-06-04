@@ -1,5 +1,6 @@
 import React, { useRef, useState } from "react";
 import { callService } from "../services/api/callService";
+import { auth } from "../services/firebase";
 import "../styles/OpsCenter.css";
 
 const OpsCenter = () => {
@@ -26,6 +27,21 @@ const OpsCenter = () => {
     reader.readAsText(file);
   };
 
+  const refreshToken = async () => {
+    try {
+      const user = auth.currentUser;
+      if (user) {
+        const newToken = await user.getIdToken(true);
+        localStorage.setItem("authToken", newToken);
+        return newToken;
+      }
+      throw new Error("No user found");
+    } catch (error) {
+      console.error("Token refresh failed:", error);
+      throw error;
+    }
+  };
+
   const handleStartCalling = async () => {
     if (!numbers.length) {
       alert("Please upload numbers first.");
@@ -34,14 +50,32 @@ const OpsCenter = () => {
     setLoading(true);
     setError(null);
     try {
-      const token = localStorage.getItem("authToken");
+      let token = localStorage.getItem("authToken");
       if (!token) {
         throw new Error("Please log in to start calls");
       }
 
-      const res = await callService.startBulkCalls({ phoneNumbers: numbers });
-      setActiveCallIds(res.data.callIds || []);
-      alert("Calling started successfully!");
+      try {
+        const res = await callService.startBulkCalls({ phoneNumbers: numbers });
+        setActiveCallIds(res.data.callIds || []);
+        alert("Calling started successfully!");
+      } catch (err) {
+        if (
+          err.response?.status === 401 &&
+          err.response?.data?.code === "TOKEN_EXPIRED"
+        ) {
+          // Token expired, try to refresh
+          await refreshToken();
+          // Retry the request
+          const res = await callService.startBulkCalls({
+            phoneNumbers: numbers,
+          });
+          setActiveCallIds(res.data.callIds || []);
+          alert("Calling started successfully!");
+        } else {
+          throw err;
+        }
+      }
     } catch (err) {
       console.error("Start calling error:", err);
       setError(
@@ -49,6 +83,7 @@ const OpsCenter = () => {
       );
       if (err.response?.status === 401) {
         alert("Your session has expired. Please log in again.");
+        window.location.href = "/login";
       }
     } finally {
       setLoading(false);

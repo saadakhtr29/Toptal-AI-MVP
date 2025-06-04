@@ -4,9 +4,9 @@ module.exports = {
   up: async (queryInterface, Sequelize) => {
     await queryInterface.createTable("users", {
       id: {
-        type: Sequelize.INTEGER,
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.UUIDV4,
         primaryKey: true,
-        autoIncrement: true,
       },
       firebase_uid: {
         type: Sequelize.STRING,
@@ -27,6 +27,11 @@ module.exports = {
         allowNull: false,
         defaultValue: "user",
       },
+      status: {
+        type: Sequelize.STRING,
+        allowNull: false,
+        defaultValue: "active",
+      },
       picture: {
         type: Sequelize.STRING,
         allowNull: true,
@@ -46,6 +51,12 @@ module.exports = {
         defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
       },
     });
+
+    // Add indexes
+    await queryInterface.addIndex("users", ["email"]);
+    await queryInterface.addIndex("users", ["firebase_uid"]);
+    await queryInterface.addIndex("users", ["role"]);
+    await queryInterface.addIndex("users", ["status"]);
   },
 
   down: async (queryInterface, Sequelize) => {

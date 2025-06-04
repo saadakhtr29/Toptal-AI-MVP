@@ -1,8 +1,15 @@
 const speech = require("@google-cloud/speech");
 const { Transform } = require("stream");
+const path = require("path");
 
 class SpeechToTextService {
   constructor() {
+    // Set Google Cloud credentials path
+    process.env.GOOGLE_APPLICATION_CREDENTIALS = path.join(
+      __dirname,
+      "../config/google-credentials.json"
+    );
+
     this.client = new speech.SpeechClient();
     this.config = {
       encoding: "LINEAR16",
@@ -119,49 +126,58 @@ class SpeechToTextService {
   }
 
   // Start real-time transcription
-  async startRealtimeTranscription(audioStream, callback) {
+  async startRealtimeTranscription(audioInputStream, onTranscription) {
     try {
+      if (!audioInputStream || typeof audioInputStream.pipe !== "function") {
+        throw new Error("Invalid audio input stream");
+      }
+
+      console.log("Starting real-time transcription with config:", this.config);
+
       const request = {
         config: this.config,
         interimResults: true,
       };
 
+      // Create recognition stream with timeout
       const recognizeStream = this.client
         .streamingRecognize(request)
         .on("error", (error) => {
           console.error("Streaming Recognition Error:", error);
-          callback(error);
+          onTranscription(error);
         })
         .on("data", (data) => {
           if (data.results[0] && data.results[0].alternatives[0]) {
-            callback(null, {
+            const result = {
               transcript: data.results[0].alternatives[0].transcript,
               isFinal: data.results[0].isFinal,
               confidence: data.results[0].alternatives[0].confidence,
-            });
+            };
+            onTranscription(null, result);
           }
+        })
+        .on("end", () => {
+          console.log("Recognition stream ended");
         });
 
-      // Create a transform stream to convert audio chunks
-      const transformStream = new Transform({
-        transform(chunk, encoding, callback) {
-          // Convert audio chunk to the required format
-          const audioChunk = this.processAudioChunk(chunk);
-          callback(null, audioChunk);
-        },
-        processAudioChunk(chunk) {
-          // Add any necessary audio processing here
-          // For example, converting sample rate, format, etc.
-          return chunk;
-        },
+      // Set up keep-alive
+      const keepAliveInterval = setInterval(() => {
+        if (recognizeStream.writable) {
+          recognizeStream.write({ audioContent: Buffer.alloc(0) });
+        }
+      }, 10000); // Send empty buffer every 10 seconds
+
+      // Clean up keep-alive on stream end
+      recognizeStream.on("end", () => {
+        clearInterval(keepAliveInterval);
       });
 
-      // Pipe audio stream through transform and to recognition
-      audioStream.pipe(transformStream).pipe(recognizeStream);
+      // Pipe audio data to recognition stream
+      audioInputStream.pipe(recognizeStream);
 
       return recognizeStream;
     } catch (error) {
-      console.error("Real-time Transcription Error:", error);
+      console.error("Error starting real-time transcription:", error);
       throw new Error("Failed to start real-time transcription");
     }
   }
@@ -177,6 +193,28 @@ class SpeechToTextService {
   stopRealtimeTranscription(stream) {
     if (stream) {
       stream.end();
+    }
+  }
+
+  async processAudioChunk(streamId, audioData) {
+    try {
+      if (!audioData || !Buffer.isBuffer(audioData)) {
+        throw new Error("Invalid audio data");
+      }
+
+      // Process audio chunk
+      const request = {
+        config: this.config,
+        audio: {
+          content: audioData.toString("base64"),
+        },
+      };
+
+      const [response] = await this.client.recognize(request);
+      return response;
+    } catch (error) {
+      console.error("Error processing audio chunk:", error);
+      throw error;
     }
   }
 }

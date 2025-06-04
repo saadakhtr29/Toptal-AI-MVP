@@ -1,51 +1,57 @@
-const { Model, DataTypes } = require("sequelize");
-const sequelize = require("../config/database");
+const { Model } = require("sequelize");
 
-class Interaction extends Model {}
+module.exports = (sequelize, DataTypes) => {
+  class Interaction extends Model {
+    static associate(models) {
+      // Define associations here
+      Interaction.belongsTo(models.User, { foreignKey: "userId" });
+    }
+  }
 
-Interaction.init(
-  {
-    id: {
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
-      primaryKey: true,
-    },
-    userId: {
-      type: DataTypes.UUID,
-      allowNull: false,
-      references: {
-        model: "users",
-        key: "id",
+  Interaction.init(
+    {
+      id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true,
+      },
+      userId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        field: "user_id",
+      },
+      type: {
+        type: DataTypes.ENUM("CALL", "INTERVIEW", "CHAT"),
+        allowNull: false,
+      },
+      status: {
+        type: DataTypes.ENUM("PENDING", "ACTIVE", "COMPLETED", "FAILED"),
+        allowNull: false,
+        defaultValue: "PENDING",
+      },
+      metadata: {
+        type: DataTypes.JSONB,
+        allowNull: true,
+      },
+      startTime: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        field: "start_time",
+      },
+      endTime: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        field: "end_time",
       },
     },
-    type: {
-      type: DataTypes.ENUM("CALL", "INTERVIEW", "CHAT"),
-      allowNull: false,
-    },
-    status: {
-      type: DataTypes.ENUM("PENDING", "ACTIVE", "COMPLETED", "FAILED"),
-      allowNull: false,
-      defaultValue: "PENDING",
-    },
-    metadata: {
-      type: DataTypes.JSONB,
-      allowNull: true,
-    },
-    startTime: {
-      type: DataTypes.DATE,
-      allowNull: true,
-    },
-    endTime: {
-      type: DataTypes.DATE,
-      allowNull: true,
-    },
-  },
-  {
-    sequelize,
-    modelName: "Interaction",
-    tableName: "interactions",
-    timestamps: true,
-  }
-);
+    {
+      sequelize,
+      modelName: "Interaction",
+      tableName: "interactions",
+      timestamps: true,
+      underscored: true,
+    }
+  );
 
-module.exports = Interaction;
+  return Interaction;
+};

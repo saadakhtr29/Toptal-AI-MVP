@@ -2,47 +2,35 @@ const express = require("express");
 const router = express.Router();
 const callController = require("../controllers/callController");
 const {
-  authMiddleware,
   verifyToken,
   checkRole,
   checkInteractionAccess,
 } = require("../middleware/authMiddleware");
 
-// POST /api/calls/start - Start an outbound call
-router.post("/start", (req, res) => callController.startCall(req, res));
-
-// GET /api/calls/status/:callId - Get call status
-router.get("/status/:callId", (req, res) =>
-  callController.getCallStatus(req, res)
+// Public routes (Twilio webhooks - no auth required)
+router.post("/voice", (req, res) =>
+  callController.handleIncomingCall(req, res)
+);
+router.post("/status", (req, res) => callController.handleCallStatus(req, res));
+router.post("/stream", (req, res) =>
+  callController.handleMediaStream(req, res)
 );
 
-// POST /api/calls/start-bulk - Start bulk calls
-router.post("/start-bulk", (req, res) =>
+// Protected routes (require authentication)
+router.post("/start", verifyToken, (req, res) =>
+  callController.startCall(req, res)
+);
+router.post("/start-bulk", verifyToken, (req, res) =>
   callController.startBulkCalls(req, res)
 );
-
-// Initialize a new call
-router.post("/initiate", authMiddleware, callController.initiateCall);
-
-// Public routes (Twilio webhooks)
-router.post("/voice", callController.handleIncomingCall);
-router.post("/status", callController.handleCallStatus);
-router.post("/stream", callController.handleMediaStream);
-
-// Protected routes
-router.use(authMiddleware);
-router.post("/:callId/end", callController.endCall);
-
-// Get call status
-router.get("/:callId/status", callController.getCallStatus);
-
-// Handle media stream
-router.post(
-  "/:callId/stream",
-  verifyToken,
-  checkRole(["ADMIN", "RECRUITER"]),
-  checkInteractionAccess,
-  callController.handleMediaStream
+router.post("/initiate", verifyToken, (req, res) =>
+  callController.initiateCall(req, res)
+);
+router.get("/status/:callId", verifyToken, (req, res) =>
+  callController.getCallStatus(req, res)
+);
+router.post("/:callId/end", verifyToken, (req, res) =>
+  callController.endCall(req, res)
 );
 
 module.exports = router;

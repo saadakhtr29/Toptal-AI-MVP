@@ -10,11 +10,20 @@ class StreamProcessor {
     this.activeStreams = new Map();
     this.bufferSize = 4096;
     this.sampleRate = 16000;
+    this.maxRetries = 3;
+    this.retryDelay = 1000; // 1 second
+    this.streamTimeout = 300000; // 5 minutes
   }
 
   // Process incoming audio stream
   async processStream(streamId, audioStream, sessionId, options = {}) {
     try {
+      console.log(`Starting stream processing for call ${streamId}`);
+
+      if (!audioStream || typeof audioStream.pipe !== "function") {
+        throw new Error("Invalid audio stream provided");
+      }
+
       // Initialize stream processing
       const streamContext = {
         streamId,
@@ -23,6 +32,10 @@ class StreamProcessor {
         buffer: Buffer.alloc(0),
         isProcessing: true,
         options,
+        retryCount: 0,
+        audioStream,
+        transformStream: null,
+        transcriptionStream: null,
       };
 
       this.activeStreams.set(streamId, streamContext);
@@ -30,37 +43,147 @@ class StreamProcessor {
       // Create transform stream for audio processing
       const transformStream = new Transform({
         transform: (chunk, encoding, callback) => {
-          this.processAudioChunk(streamId, chunk, callback);
+          try {
+            // Process the audio chunk
+            this.processAudioChunk(streamId, chunk)
+              .then(() => callback())
+              .catch((error) => {
+                console.error("Error in transform stream:", error);
+                this.handleStreamError(streamId, error);
+                callback(error);
+              });
+          } catch (error) {
+            console.error("Error in transform stream:", error);
+            this.handleStreamError(streamId, error);
+            callback(error);
+          }
         },
       });
 
-      // Set up transcription stream
+      streamContext.transformStream = transformStream;
+
+      // Set up transcription stream with retry logic
+      await this.setupTranscriptionStream(streamId, transformStream);
+
+      // Set up stream timeout
+      this.setupStreamTimeout(streamId);
+
+      // Handle stream errors
+      transformStream.on("error", (error) => {
+        console.error("Transform Stream Error:", error);
+        this.handleStreamError(streamId, error);
+      });
+
+      // Pipe audio stream to transform stream
+      audioStream.pipe(transformStream);
+
+      return streamContext;
+    } catch (error) {
+      console.error("Stream Processing Error:", error);
+      throw new Error(`Failed to process audio stream: ${error.message}`);
+    }
+  }
+
+  // Setup stream timeout
+  setupStreamTimeout(streamId) {
+    const context = this.activeStreams.get(streamId);
+    if (!context) return;
+
+    context.timeoutId = setTimeout(() => {
+      console.log(`Stream timeout reached for call ${streamId}`);
+      this.handleStreamError(streamId, new Error("Stream timeout reached"));
+    }, this.streamTimeout);
+  }
+
+  // Setup transcription stream with retry logic
+  async setupTranscriptionStream(streamId, transformStream) {
+    const context = this.activeStreams.get(streamId);
+    if (!context) {
+      throw new Error("Stream context not found");
+    }
+
+    try {
+      if (!transformStream || typeof transformStream.pipe !== "function") {
+        throw new Error("Invalid transform stream");
+      }
+
       const transcriptionStream = await speechToText.startRealtimeTranscription(
         transformStream,
         async (error, result) => {
           if (error) {
             console.error("Transcription Error:", error);
+            this.handleStreamError(streamId, error);
             return;
           }
 
-          if (result.isFinal) {
+          if (result && result.isFinal) {
             await this.handleTranscription(streamId, result);
           }
         }
       );
 
-      // Pipe audio stream through processing pipeline
-      audioStream.pipe(transformStream).pipe(transcriptionStream);
+      transcriptionStream.on("error", (error) => {
+        console.error("Transcription Stream Error:", error);
+        this.handleStreamError(streamId, error);
+      });
 
-      return streamContext;
+      context.transcriptionStream = transcriptionStream;
     } catch (error) {
-      console.error("Stream Processing Error:", error);
-      throw new Error("Failed to process audio stream");
+      console.error("Error setting up transcription stream:", error);
+      this.handleStreamError(streamId, error);
+    }
+  }
+
+  // Handle stream errors with retry logic
+  async handleStreamError(streamId, error) {
+    const context = this.activeStreams.get(streamId);
+    if (!context) return;
+
+    // Clear timeout if exists
+    if (context.timeoutId) {
+      clearTimeout(context.timeoutId);
+    }
+
+    // Check if it's a timeout error
+    const isTimeout = error.code === 2 && error.details?.includes("408");
+
+    if (isTimeout && context.retryCount < this.maxRetries) {
+      console.log(
+        `Retrying stream for call ${streamId}, attempt ${
+          context.retryCount + 1
+        }`
+      );
+      context.retryCount++;
+
+      // Wait before retrying
+      await new Promise((resolve) =>
+        setTimeout(resolve, this.retryDelay * context.retryCount)
+      );
+
+      try {
+        // Clean up existing stream
+        if (context.transcriptionStream) {
+          context.transcriptionStream.end();
+        }
+
+        // Retry setup
+        await this.setupTranscriptionStream(streamId, context.transformStream);
+
+        // Reset timeout
+        this.setupStreamTimeout(streamId);
+      } catch (retryError) {
+        console.error(`Retry failed for call ${streamId}:`, retryError);
+        this.stopStream(streamId);
+      }
+    } else {
+      // Max retries reached or non-timeout error
+      console.error(`Stream error for call ${streamId}:`, error);
+      this.stopStream(streamId);
     }
   }
 
   // Process audio chunk
-  async processAudioChunk(streamId, chunk, callback) {
+  async processAudioChunk(streamId, chunk) {
     try {
       const context = this.activeStreams.get(streamId);
       if (!context) {
@@ -72,15 +195,15 @@ class StreamProcessor {
 
       // Process buffer if it's large enough
       if (context.buffer.length >= this.bufferSize) {
-        const processedChunk = this.processBuffer(context.buffer);
-        context.buffer = Buffer.alloc(0);
-        callback(null, processedChunk);
-      } else {
-        callback();
+        const audioData = context.buffer.slice(0, this.bufferSize);
+        context.buffer = context.buffer.slice(this.bufferSize);
+
+        // Send audio data to transcription service
+        await speechToText.processAudioChunk(streamId, audioData);
       }
     } catch (error) {
       console.error("Audio Chunk Processing Error:", error);
-      callback(error);
+      throw error;
     }
   }
 
@@ -98,6 +221,10 @@ class StreamProcessor {
       if (!context) {
         throw new Error("Stream context not found");
       }
+
+      console.log(
+        `Received transcription for call ${streamId}: ${result.transcript}`
+      );
 
       // Add transcription to conversation memory
       conversationMemory.addMessage(context.sessionId, {
@@ -118,11 +245,8 @@ class StreamProcessor {
         audioConfig: context.options.audioConfig,
       });
 
-      // Create streaming response
-      const audioStream = textToSpeech.createStreamingResponse(audioContent);
-
       // Broadcast transcription and response
-      websocketService.broadcastToRoom(context.sessionId, {
+      websocketService.sendToClient(context.sessionId, {
         type: "transcription",
         data: {
           transcript: result.transcript,
@@ -131,7 +255,7 @@ class StreamProcessor {
         },
       });
 
-      websocketService.broadcastToRoom(context.sessionId, {
+      websocketService.sendToClient(context.sessionId, {
         type: "response",
         data: {
           text: response.text,
@@ -140,10 +264,11 @@ class StreamProcessor {
         },
       });
 
-      return audioStream;
+      return audioContent;
     } catch (error) {
       console.error("Transcription Handling Error:", error);
-      throw new Error("Failed to handle transcription");
+      websocketService.sendError(streamId, "Failed to handle transcription");
+      throw error;
     }
   }
 
@@ -152,31 +277,55 @@ class StreamProcessor {
     try {
       const context = this.activeStreams.get(streamId);
       if (!context) {
-        throw new Error("Stream context not found");
+        console.warn(
+          `No stream context found for ${streamId} - stream may have already been stopped`
+        );
+        return null;
       }
 
-      // End conversation
-      const summary = await conversationMemory.endConversation(
-        context.sessionId
-      );
+      console.log(`Stopping stream processing for call ${streamId}`);
 
-      // Clean up stream
-      context.isProcessing = false;
-      this.activeStreams.delete(streamId);
+      // Clear timeout if exists
+      if (context.timeoutId) {
+        clearTimeout(context.timeoutId);
+      }
 
-      // Broadcast end of stream
-      websocketService.broadcastToRoom(context.sessionId, {
-        type: "stream_end",
-        data: {
-          summary,
-          duration: Date.now() - context.startTime,
-        },
-      });
+      // Clean up streams
+      if (context.transcriptionStream) {
+        context.transcriptionStream.end();
+      }
+      if (context.transformStream) {
+        context.transformStream.end();
+      }
+      if (
+        context.audioStream &&
+        typeof context.audioStream.end === "function"
+      ) {
+        context.audioStream.end();
+      } else if (
+        context.audioStream &&
+        typeof context.audioStream.destroy === "function"
+      ) {
+        context.audioStream.destroy();
+      }
 
-      return summary;
+      // End conversation if session exists
+      try {
+        const summary = await conversationMemory.endConversation(
+          context.sessionId
+        );
+        context.isProcessing = false;
+        this.activeStreams.delete(streamId);
+        return summary;
+      } catch (error) {
+        console.warn(`Error ending conversation for ${streamId}:`, error);
+        context.isProcessing = false;
+        this.activeStreams.delete(streamId);
+        return null;
+      }
     } catch (error) {
       console.error("Stream Stop Error:", error);
-      throw new Error("Failed to stop stream");
+      return null;
     }
   }
 

@@ -1,72 +1,173 @@
 const WebSocket = require("ws");
 const { v4: uuidv4 } = require("uuid");
 const jwt = require("jsonwebtoken");
+const streamProcessor = require("./streamProcessor");
 
 class WebSocketService {
   constructor() {
     this.wss = null;
     this.clients = new Map(); // Map of client connections
     this.rooms = new Map(); // Map of room subscriptions
+    this.streamContexts = new Map(); // Map of stream contexts
+  }
+
+  // Get client by ID
+  getClient(clientId) {
+    return this.clients.get(clientId);
+  }
+
+  // Send error message to client
+  sendError(clientId, error) {
+    console.error(`[WebSocket ERROR] [${clientId}] ${error}`);
+    const client = this.clients.get(clientId);
+    if (client && client.readyState === WebSocket.OPEN) {
+      try {
+        client.send(
+          JSON.stringify({
+            type: "error",
+            error: error.toString(),
+            timestamp: Date.now(),
+          })
+        );
+      } catch (err) {
+        console.error(
+          `Error sending error message to client ${clientId}:`,
+          err
+        );
+      }
+    }
+  }
+
+  // Send message to specific client
+  sendToClient(clientId, message) {
+    const client = this.clients.get(clientId);
+    if (client && client.readyState === WebSocket.OPEN) {
+      try {
+        client.send(JSON.stringify(message));
+      } catch (error) {
+        console.error(`Error sending message to client ${clientId}:`, error);
+      }
+    }
   }
 
   // Initialize WebSocket server
   initialize(server) {
-    this.wss = new WebSocket.Server({ server });
-
-    this.wss.on("connection", async (ws, req) => {
-      try {
-        // Authenticate connection
-        const token = this.extractToken(req);
-        if (!token) {
-          ws.close(1008, "Authentication required");
-          return;
-        }
-
-        const user = await this.verifyToken(token);
-        if (!user) {
-          ws.close(1008, "Invalid token");
-          return;
-        }
-
-        // Generate client ID and store connection
-        const clientId = uuidv4();
-        this.clients.set(clientId, {
-          ws,
-          userId: user.uid,
-          role: user.role,
-          subscriptions: new Set(),
-        });
-
-        // Send connection confirmation
-        this.sendToClient(clientId, {
-          type: "connection_established",
-          clientId,
-          user: {
-            uid: user.uid,
-            role: user.role,
-          },
-        });
-
-        // Handle messages
-        ws.on("message", (message) => {
-          try {
-            const data = JSON.parse(message);
-            this.handleMessage(clientId, data);
-          } catch (error) {
-            console.error("WebSocket message error:", error);
-            this.sendError(clientId, "Invalid message format");
-          }
-        });
-
-        // Handle disconnection
-        ws.on("close", () => {
-          this.handleDisconnect(clientId);
-        });
-      } catch (error) {
-        console.error("WebSocket connection error:", error);
-        ws.close(1011, "Internal server error");
-      }
+    this.wss = new WebSocket.Server({
+      server,
+      path: "/api/calls/stream",
+      perMessageDeflate: false,
     });
+
+    this.wss.on("connection", (ws, req) => {
+      console.log("New WebSocket connection attempt");
+      console.log("Request URL:", req.url);
+
+      // Extract callSid from URL parameters
+      const url = new URL(req.url, "ws://localhost");
+      const callSid = url.searchParams.get("callSid");
+
+      if (!callSid) {
+        console.error("No callSid provided in WebSocket connection");
+        ws.close(1008, "No callSid provided");
+        return;
+      }
+
+      console.log(`WebSocket connection established for call ${callSid}`);
+
+      // Store client connection
+      this.clients.set(callSid, ws);
+      this.streamContexts.set(callSid, {
+        ws,
+        startTime: Date.now(),
+        isActive: true,
+      });
+
+      // Send connection confirmation
+      this.sendToClient(callSid, {
+        type: "connection_established",
+        callSid,
+        timestamp: Date.now(),
+      });
+
+      // Set up stream processing with proper audio configuration
+      streamProcessor
+        .processStream(callSid, ws, callSid, {
+          voice: "Polly.Amy",
+          audioConfig: {
+            audioEncoding: "LINEAR16",
+            sampleRateHertz: 16000,
+            effectsProfileId: ["telephony-class-application"],
+          },
+        })
+        .then(() => {
+          console.log(`Stream processing setup completed for call ${callSid}`);
+        })
+        .catch((error) => {
+          console.error(
+            `Error setting up stream processing for call ${callSid}:`,
+            error
+          );
+          this.sendError(callSid, "Error setting up audio processing");
+          ws.close(1011, "Stream processing setup failed");
+        });
+
+      // Handle incoming messages
+      ws.on("message", async (message) => {
+        try {
+          console.log(`Received message for call ${callSid}`);
+          // Process incoming audio data
+          await streamProcessor.processAudioChunk(callSid, message);
+        } catch (error) {
+          console.error("Error processing WebSocket message:", error);
+          this.sendError(callSid, "Error processing audio data");
+        }
+      });
+
+      // Handle connection close
+      ws.on("close", (code, reason) => {
+        console.log(
+          `WebSocket connection closed for call ${callSid}. Code: ${code}, Reason: ${reason}`
+        );
+        this.cleanupStream(callSid);
+      });
+
+      // Handle errors
+      ws.on("error", (error) => {
+        console.error(`WebSocket error for call ${callSid}:`, error);
+        this.cleanupStream(callSid);
+      });
+    });
+
+    // Handle WebSocket server errors
+    this.wss.on("error", (error) => {
+      console.error("WebSocket server error:", error);
+    });
+  }
+
+  // Cleanup stream resources
+  async cleanupStream(callSid) {
+    try {
+      // Remove from clients map
+      this.clients.delete(callSid);
+
+      // Remove from stream contexts
+      this.streamContexts.delete(callSid);
+
+      // Stop stream processing
+      await streamProcessor.stopStream(callSid);
+    } catch (error) {
+      console.error(`Error cleaning up stream for call ${callSid}:`, error);
+    }
+  }
+
+  // Check if stream exists
+  hasStream(callSid) {
+    return this.streamContexts.has(callSid);
+  }
+
+  // Get stream context
+  getStreamContext(callSid) {
+    return this.streamContexts.get(callSid);
   }
 
   // Extract token from request
@@ -211,30 +312,31 @@ class WebSocketService {
     });
   }
 
-  // Send message to specific client
-  sendToClient(clientId, message) {
-    const client = this.clients.get(clientId);
-    if (!client) return;
-
-    if (client.ws.readyState === WebSocket.OPEN) {
-      client.ws.send(JSON.stringify(message));
+  // Close WebSocket server
+  close() {
+    if (this.wss) {
+      this.wss.close(() => {
+        console.log("WebSocket server closed");
+      });
     }
   }
 
-  // Send error to client
-  sendError(clientId, error) {
-    this.sendToClient(clientId, {
-      type: "error",
-      error,
-      timestamp: Date.now(),
+  // Broadcast message to all clients
+  broadcast(message) {
+    this.wss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify(message));
+      }
     });
   }
 
-  // Close all connections
-  close() {
-    if (this.wss) {
-      this.wss.close();
-    }
+  // Broadcast to specific room
+  broadcastToRoom(roomId, message) {
+    this.wss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN && client.roomId === roomId) {
+        client.send(JSON.stringify(message));
+      }
+    });
   }
 }
 

@@ -18,24 +18,44 @@ const verifyToken = async (req, res, next) => {
     }
 
     const token = authHeader.split(" ")[1];
-    const decodedToken = await admin.auth().verifyIdToken(token);
+    try {
+      const decodedToken = await admin.auth().verifyIdToken(token);
+      console.log("Decoded token:", decodedToken);
 
-    // Get or create user in our database
-    let user = await User.findOne({ where: { firebaseUid: decodedToken.uid } });
-
-    if (!user) {
-      // Create new user if doesn't exist
-      user = await User.create({
-        firebaseUid: decodedToken.uid,
-        email: decodedToken.email,
-        name: decodedToken.name || decodedToken.email.split("@")[0],
-        role: "CANDIDATE", // Default role
+      // Get or create user in our database
+      let user = await User.findOne({
+        where: { firebaseUid: decodedToken.uid },
       });
-    }
 
-    // Attach user to request
-    req.user = user;
-    next();
+      if (!user) {
+        // Create new user if doesn't exist
+        user = await User.create({
+          firebaseUid: decodedToken.uid,
+          email: decodedToken.email,
+          name: decodedToken.name || decodedToken.email.split("@")[0],
+          role: "user", // Default role for new users
+          status: "active",
+        });
+      }
+
+      // Update last login
+      await user.update({
+        lastLogin: new Date(),
+      });
+
+      // Attach user to request
+      req.user = user;
+      next();
+    } catch (error) {
+      console.error("Token verification error:", error);
+      if (error.code === "auth/id-token-expired") {
+        return res.status(401).json({
+          error: "Token expired",
+          code: "TOKEN_EXPIRED",
+        });
+      }
+      return res.status(401).json({ error: "Invalid token" });
+    }
   } catch (error) {
     console.error("Auth Error:", error);
     res.status(401).json({ error: "Invalid token" });
@@ -50,7 +70,11 @@ const checkRole = (roles) => {
     }
 
     if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ error: "Insufficient permissions" });
+      return res.status(403).json({
+        error: "Insufficient permissions",
+        requiredRole: roles,
+        currentRole: req.user.role,
+      });
     }
 
     next();
@@ -85,7 +109,7 @@ const checkInteractionAccess = async (req, res, next) => {
 };
 
 // Combined middleware for protected routes
-const authMiddleware = [verifyToken, checkRole(["ADMIN", "RECRUITER"])];
+const authMiddleware = [verifyToken];
 
 module.exports = {
   verifyToken,

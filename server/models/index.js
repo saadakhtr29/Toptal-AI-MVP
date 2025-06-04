@@ -1,7 +1,17 @@
-const User = require("./User");
-const Interaction = require("./Interaction");
-const CallSession = require("./CallSession");
-const Subaccount = require("./Subaccount");
+const { Sequelize } = require("sequelize");
+const sequelize = require("../config/database");
+
+// Import models
+const UserModel = require("./User");
+const InteractionModel = require("./Interaction");
+const CallSessionModel = require("./CallSession");
+const SubaccountModel = require("./Subaccount");
+
+// Initialize models
+const User = UserModel(sequelize, Sequelize.DataTypes);
+const Interaction = InteractionModel(sequelize, Sequelize.DataTypes);
+const CallSession = CallSessionModel(sequelize, Sequelize.DataTypes);
+const Subaccount = SubaccountModel(sequelize, Sequelize.DataTypes);
 
 // Define associations
 const defineAssociations = () => {
@@ -26,6 +36,8 @@ const defineAssociations = () => {
 defineAssociations();
 
 module.exports = {
+  sequelize,
+  Sequelize,
   User,
   Interaction,
   CallSession,

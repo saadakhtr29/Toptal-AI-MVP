@@ -1,14 +1,21 @@
 import axios from "axios";
-import API_CONFIG from "./config";
 import { auth } from "../../services/firebase";
+
+const API_CONFIG = {
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:8080",
+  headers: {
+    "Content-Type": "application/json",
+  },
+};
 
 const apiClient = axios.create(API_CONFIG);
 
 // Request interceptor for authentication
 apiClient.interceptors.request.use(async (config) => {
   try {
-    const token = localStorage.getItem("authToken");
-    if (token) {
+    const user = auth.currentUser;
+    if (user) {
+      const token = await user.getIdToken();
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
@@ -28,7 +35,6 @@ apiClient.interceptors.response.use(
         const user = auth.currentUser;
         if (user) {
           const newToken = await user.getIdToken(true);
-          localStorage.setItem("authToken", newToken);
 
           // Retry the original request with new token
           error.config.headers.Authorization = `Bearer ${newToken}`;
@@ -39,7 +45,6 @@ apiClient.interceptors.response.use(
       }
 
       // If token refresh fails or no user, redirect to login
-      localStorage.removeItem("authToken");
       window.location.href = "/login";
     }
     return Promise.reject(error);

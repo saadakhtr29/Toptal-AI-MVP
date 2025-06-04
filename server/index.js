@@ -5,6 +5,8 @@ const prisma = require("./prisma");
 const { errorHandler } = require("./middleware/errorHandler");
 const authMiddleware = require("./middleware/authMiddleware");
 const websocketService = require("./services/websocketService");
+const http = require("http");
+const sequelize = require("./config/database");
 
 // Import routes
 const callRoutes = require("./routes/callRoutes");
@@ -16,6 +18,10 @@ const analyticsRoutes = require("./routes/analyticsRoutes");
 
 // Initialize Express app
 const app = express();
+const server = http.createServer(app);
+
+// Initialize WebSocket server
+websocketService.initialize(server);
 
 // CORS configuration
 app.use(
@@ -35,8 +41,10 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
+// Webhook routes (no authentication)
+app.use("/api/calls", callRoutes);
+
 // Protected routes with authentication middleware
-app.use("/api/calls", authMiddleware.verifyToken, callRoutes);
 app.use("/api/voice-agent", authMiddleware.verifyToken, voiceAgentRoutes);
 app.use("/api/interviews", authMiddleware.verifyToken, interviewRoutes);
 app.use("/api/users", authMiddleware.verifyToken, userRoutes);
@@ -48,12 +56,16 @@ app.use(errorHandler);
 
 // Start server
 const PORT = process.env.PORT || 8080;
-const server = app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+server.listen(PORT, async () => {
+  try {
+    await sequelize.authenticate();
+    console.log("Database connection has been established successfully.");
+    console.log(`Server running on port ${PORT}`);
+  } catch (error) {
+    console.error("Unable to connect to the database:", error);
+    process.exit(1); // Exit if we can't connect to the database
+  }
 });
-
-// Initialize WebSocket server
-websocketService.initialize(server);
 
 // Handle graceful shutdown
 process.on("SIGTERM", async () => {

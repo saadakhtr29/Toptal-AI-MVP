@@ -2,37 +2,31 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.createTable("users", {
+    await queryInterface.createTable("subaccounts", {
       id: {
-        type: Sequelize.INTEGER,
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.UUIDV4,
         primaryKey: true,
-        autoIncrement: true,
-      },
-      firebase_uid: {
-        type: Sequelize.STRING,
-        allowNull: false,
-        unique: true,
-      },
-      email: {
-        type: Sequelize.STRING,
-        allowNull: false,
-        unique: true,
       },
       name: {
         type: Sequelize.STRING,
+        allowNull: false,
+      },
+      twilio_account_sid: {
+        type: Sequelize.STRING,
         allowNull: true,
       },
-      role: {
+      twilio_auth_token: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
+      status: {
         type: Sequelize.STRING,
         allowNull: false,
-        defaultValue: "user",
+        defaultValue: "active",
       },
-      picture: {
-        type: Sequelize.STRING,
-        allowNull: true,
-      },
-      last_login: {
-        type: Sequelize.DATE,
+      settings: {
+        type: Sequelize.JSONB,
         allowNull: true,
       },
       created_at: {
@@ -46,9 +40,13 @@ module.exports = {
         defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
       },
     });
+
+    // Add indexes
+    await queryInterface.addIndex("subaccounts", ["name"]);
+    await queryInterface.addIndex("subaccounts", ["status"]);
   },
 
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.dropTable("users");
+    await queryInterface.dropTable("subaccounts");
   },
 };

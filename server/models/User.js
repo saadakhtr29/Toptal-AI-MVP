@@ -1,52 +1,60 @@
-const { Model, DataTypes } = require("sequelize");
-const sequelize = require("../config/database");
+const { Model } = require("sequelize");
 
-class User extends Model {}
+module.exports = (sequelize, DataTypes) => {
+  class User extends Model {
+    static associate(models) {
+      // Define associations here
+      User.hasMany(models.Interaction, { foreignKey: "userId" });
+      User.hasMany(models.CallSession, { foreignKey: "userId" });
+      User.hasMany(models.Subaccount, { foreignKey: "userId" });
+    }
+  }
 
-User.init(
-  {
-    id: {
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
-      primaryKey: true,
-    },
-    firebaseUid: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      unique: true,
-    },
-    email: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      unique: true,
-      validate: {
-        isEmail: true,
+  User.init(
+    {
+      id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true,
+      },
+      firebaseUid: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true,
+        field: "firebase_uid",
+      },
+      email: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true,
+      },
+      name: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      role: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        defaultValue: "user",
+      },
+      picture: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      lastLogin: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        field: "last_login",
       },
     },
-    name: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    role: {
-      type: DataTypes.ENUM("ADMIN", "RECRUITER", "CANDIDATE"),
-      allowNull: false,
-      defaultValue: "CANDIDATE",
-    },
-    picture: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    lastLogin: {
-      type: DataTypes.DATE,
-      allowNull: true,
-    },
-  },
-  {
-    sequelize,
-    modelName: "User",
-    tableName: "users",
-    timestamps: true,
-  }
-);
+    {
+      sequelize,
+      modelName: "User",
+      tableName: "users",
+      timestamps: true,
+      underscored: true,
+    }
+  );
 
-module.exports = User;
+  return User;
+};
