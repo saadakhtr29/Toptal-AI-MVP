@@ -1,14 +1,16 @@
 import apiClient from "./client";
+import { auth } from "../../services/firebase";
 
 export const callService = {
   startCall: (data) => apiClient.post("/api/calls/start", data),
   getCallStatus: (callId) => apiClient.get(`/api/calls/status/${callId}`),
   startBulkCalls: async (data) => {
     try {
-      const token = localStorage.getItem("authToken");
-      if (!token) {
-        throw new Error("No auth token found");
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error("No authenticated user found");
       }
+      const token = await user.getIdToken();
       return await apiClient.post("/api/calls/start-bulk", data, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -25,10 +27,11 @@ export const callService = {
   getActiveCalls: () => apiClient.get("/api/calls/active"),
   endCall: async (callId) => {
     try {
-      const token = localStorage.getItem("authToken");
-      if (!token) {
-        throw new Error("No auth token found");
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error("No authenticated user found");
       }
+      const token = await user.getIdToken();
       return await apiClient.post(`/api/calls/${callId}/end`, null, {
         headers: {
           Authorization: `Bearer ${token}`,

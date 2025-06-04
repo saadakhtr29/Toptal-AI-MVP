@@ -50,8 +50,8 @@ const OpsCenter = () => {
     setLoading(true);
     setError(null);
     try {
-      let token = localStorage.getItem("authToken");
-      if (!token) {
+      const user = auth.currentUser;
+      if (!user) {
         throw new Error("Please log in to start calls");
       }
 
@@ -60,12 +60,9 @@ const OpsCenter = () => {
         setActiveCallIds(res.data.callIds || []);
         alert("Calling started successfully!");
       } catch (err) {
-        if (
-          err.response?.status === 401 &&
-          err.response?.data?.code === "TOKEN_EXPIRED"
-        ) {
+        if (err.response?.status === 401) {
           // Token expired, try to refresh
-          await refreshToken();
+          await user.getIdToken(true);
           // Retry the request
           const res = await callService.startBulkCalls({
             phoneNumbers: numbers,
