@@ -54,7 +54,7 @@ Toptal-AI-MVP/
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/toptal-ai-mvp.git](https://github.com/saadakhtr29/Toptal-AI-MVP.git
+git clone https://github.com/saadakhtr29/Toptal-AI-MVP.git
 cd toptal-ai-mvp
 ```
 
